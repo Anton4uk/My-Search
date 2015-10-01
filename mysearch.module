@@ -1,0 +1,77 @@
+<?php
+/**
+ * @file
+ * Module for keyword searching.
+ */
+
+/**
+ * Implements hook_permission().
+ */
+function mysearch_permission() {
+  return array(
+    'access mysearch' => array(
+      'title' => t('Access My Search'),
+      'description' => t('Allows a user to access search results'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function mysearch_menu() {
+  $items['mysearch'] = array(
+    'title' => 'Search',
+    'page callback' => 'mysearch_searchpage',
+    'page arguments' => array(1),
+    'access arguments' => array('access mysearch'),
+    'type' => MENU_SUGGESTED_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Menu callback; presents the search search results.
+ *
+ * @param string $keyword
+ *   Keyword to use for the search.
+ *
+ * @return array
+ *   A render array completely set up with a pager.
+ */
+function mysearch_searchpage($keyword = '') {
+  if (empty($keyword)) {
+    return '';
+  }
+  $keyword = filter_xss($keyword);
+
+  $title = t('Search for %keyword', array(
+    '%keyword' => $keyword,
+  ));
+
+  $search_results = db_select('node', 'n')
+    ->fields('n', array('nid', 'title'))
+    ->condition('n.status', 1)
+    ->condition('n.title', '%' . db_like($keyword) . '%', 'LIKE')
+    ->execute();
+
+  $items = array();
+  foreach ($search_results as $search_result) {
+    $items[] = array(
+      'data' => l($search_result->title, 'node/' . $search_result->nid),
+    );
+  }
+
+  $per_page = 10;
+  $current_page = pager_default_initialize(count($items), $per_page);
+  $offset = $per_page * $current_page;
+
+  $output = theme('item_list', array(
+    'items' => array_slice($items, $offset, $per_page),
+    'title' => $title,
+  ));
+  $output .= theme('pager', array('quantity' => count($items)));
+
+  return $output;
+}

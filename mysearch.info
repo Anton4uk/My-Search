@@ -1,0 +1,4 @@
+name = My search
+description = Module for keyword searching.
+package = Custom
+core = 7.x
